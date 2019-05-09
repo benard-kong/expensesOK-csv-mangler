@@ -31,9 +31,10 @@ def format_expenses():
         print("You should only have two expenses files originally. Something is wrong")
         return
     for fileIndex in range(len(fileList)): # Did range in order to decide when to write and when to append.
+        # (for reading from multiple files but writing to single file)
         if fileIndex == 0: write_or_append = "w"
         else: write_or_append = "a"
-        origFile = open(fileList[fileIndex], "r", encoding="utf-8")
+        origFile = open(fileList[fileIndex], "r", encoding="utf-8") ## todo: should read if original encoding is utf-8 or w/e windows is (unicode?)
         origFileReader = csv.reader(origFile, delimiter = "\t")
 
         outputFile = open("expensesOutput.csv", write_or_append, encoding="utf-8", newline="")

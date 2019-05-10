@@ -8,13 +8,19 @@ import csv, os, re, datetime
 NUM_USERS = 2 ## Number of people in your household using the expenses app.
 FILE_NAME_CONTAINS = r"MoneyOK"
 FILE_TYPE = r"csv"
-PREFERRED_FORMAT = ["Date", "Amount", "Category", "Category group", "Note"] ## ordering of columns in final file (eg. date, in/out, category, subcategory, amount)
+PREFERRED_FORMAT = ["Date", "Amount", "Category", "Category group", "Note"] # ordering of columns in final file (eg.
+                                                                            # date, in/out, category, subcategory,
+                                                                            # amount)
 DESKTOP_ABS_PATH = os.sep.join((os.path.expanduser("~"), "Desktop"))
 AMOUNT_COL_TITLE = "Amount"
 CURRENCY = "KRW"
-DATE_TIME_FORMAT = "%Y.%m.%d" ## Format of the date string to change into date object
+DATE_TIME_FORMAT_ORIG = "%Y.%m.%d" ## Format of the date string to change into date object
 DELIMITER = "\t" ## Separate columns with tabs
 SALARY_STRING_NAME = "급여" ## What did you write to mean "Salary" in Categories section?
+USER_INPUT_YEAR_MONTH_FORMAT = "YYYY-MM" ## format of yr & month user should type
+USER_INPUT_YEAR_MONTH_FORMAT_DATETIME_OBJ = "%Y-%m" ## When changing user's input into datetime.date obj
+USER_INPUT_YEAR_MONTH_FORMAT_REGEX = r"\d\d\d\d-\d\d" ## regex for the format the user must type the YYYY-MM; can change the
+                                                # '-' to '.' etc. if prefer the user to type another format
 #### EDIT VARIABLES ABOVE AND PROGRAM SHOULD WORK ACCORDINGLY ####
 
 def find_csv_files():
@@ -70,7 +76,7 @@ def list_data_strings_to_python_objects(list_data):
                 dic_data[title] = None
             else:
                 if title.lower() == "date":
-                    dic_data[title] = datetime.datetime.strptime(dic_data[title], DATE_TIME_FORMAT).date()
+                    dic_data[title] = datetime.datetime.strptime(dic_data[title], DATE_TIME_FORMAT_ORIG).date()
                 elif title.lower() == "amount":
                     dic_data[title] = abs(float(dic_data[title]))
                     if CURRENCY.lower() == "krw":
@@ -89,9 +95,11 @@ def find_next_month(date_obj):
 
 def extract_month(list_data, month):
     """returns list_data with only the month the user wanted
-    month: string in the form YYYY-MM"""
-    ## todo: add an assert that month is YYYY-MM format (use regex?)
-    target_month_object = datetime.datetime.strptime(month, "%Y-%m").date()
+    month: string in the form YYYY-MM (stored in var USER_INPUT_YEAR_MONTH_FORMAT)"""
+    regex_obj = re.compile(USER_INPUT_YEAR_MONTH_FORMAT_REGEX)
+    assert regex_obj.search(month) != None, "The month format is incorrect, it should be in the following format: " + USER_INPUT_YEAR_MONTH_FORMAT
+
+    target_month_object = datetime.datetime.strptime(month, USER_INPUT_YEAR_MONTH_FORMAT_DATETIME_OBJ).date()
     month_after_object = find_next_month(target_month_object)
     new_list_data = []
     for row in list_data:
@@ -146,15 +154,15 @@ def output_list_data_to_txt(list_data, delim, append_to_file=False, enc="utf-8")
         working_file_writer.writerow(line)
     working_file.close()
 
-# origFile = open(os.path.join(DESKTOP_ABS_PATH, "unixMoneyOK - Copy.csv"), "r", encoding="utf-8")
-# origFileReader = csv.reader(origFile, delimiter="\t")
-#
-# rlist = create_rows_list(origFileReader)
-# ldata = create_list_of_data(rlist)
-# list_data_strings_to_python_objects(ldata)
-# print(ldata)
-# new_ldata = extract_month(ldata, "2017-08")
-# print(new_ldata)
-# new_new_ldata = convert_to_tuples_list_data(new_ldata)
-# print(new_new_ldata)
+origFile = open(os.path.join(DESKTOP_ABS_PATH, "unixMoneyOK - Copy.csv"), "r", encoding="utf-8")
+origFileReader = csv.reader(origFile, delimiter="\t")
+
+rlist = create_rows_list(origFileReader)
+ldata = create_list_of_data(rlist)
+list_data_strings_to_python_objects(ldata)
+print(ldata)
+new_ldata = extract_month(ldata, "2017-08")
+print(new_ldata)
+new_new_ldata = convert_to_tuples_list_data(new_ldata)
+print(new_new_ldata)
 # output_list_data_to_txt(ldata, DELIMITER)

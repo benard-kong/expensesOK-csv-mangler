@@ -87,11 +87,10 @@ def find_next_month(date_obj):
     next_month = datetime.date(yr, m, day)
     return next_month
 
-#todo: take list_data and return new list_data that only contains the month of data the user wants
 def extract_month(list_data, month):
     """returns list_data with only the month the user wanted
     month: string in the form YYYY-MM"""
-    ## add an assert that month is YYYY-MM format (use regex?)
+    ## todo: add an assert that month is YYYY-MM format (use regex?)
     target_month_object = datetime.datetime.strptime(month, "%Y-%m").date()
     month_after_object = find_next_month(target_month_object)
     new_list_data = []
@@ -100,9 +99,30 @@ def extract_month(list_data, month):
             new_list_data.append(row)
     return new_list_data
 
-#todo: take list_data and convert it from python data types list_data with tuples only (preparing for final writing; which will just use writelines)
+def convert_to_tuples_list_data(list_data):
+    """Convert dictionary form list_data to tuples list data for easy csv writing.
+    Returns that new list_data object.
+    Items in tuples will be strings.
+    eg. [("2019-05-10", "-5000", "Expense", "", ""), ("2019-05-31, "2983829", "Salary", "", ""), ...]"""
+    new_list_data = []
+    for dict_row in list_data:
+        working_tuple = []
+        is_salary = False
+        if dict_row["Category"] == SALARY_STRING_NAME: is_salary = True
+        for col_title in PREFERRED_FORMAT:
+            val = dict_row[col_title]
+            if val == None:
+                val = ""
+            elif col_title.lower() == "amount":
+                if not is_salary:
+                    val = -val
+            val = str(val)
+            val = val.replace(u"\xa0", u" ") ## replace No-Break Space with regular space
+            working_tuple.append(val)
+        working_tuple = tuple(working_tuple)
+        new_list_data.append(working_tuple)
+    return new_list_data
 
-#todo: output list_data to a txt file (or directly to xlsx/open office file?)
 def output_list_data_to_txt(list_data, delim, append_to_file=False, enc="utf-8"):
     """void function; takes the data from list_data and outputs it into a txt file
     rows are each list item
@@ -126,13 +146,15 @@ def output_list_data_to_txt(list_data, delim, append_to_file=False, enc="utf-8")
         working_file_writer.writerow(line)
     working_file.close()
 
-origFile = open(os.path.join(DESKTOP_ABS_PATH, "unixMoneyOK - Copy.csv"), "r", encoding="utf-8")
-origFileReader = csv.reader(origFile, delimiter="\t")
-
-rlist = create_rows_list(origFileReader)
-ldata = create_list_of_data(rlist)
-list_data_strings_to_python_objects(ldata)
-print(ldata)
-new_ldata = extract_month(ldata, "2017-08")
-print(new_ldata)
+# origFile = open(os.path.join(DESKTOP_ABS_PATH, "unixMoneyOK - Copy.csv"), "r", encoding="utf-8")
+# origFileReader = csv.reader(origFile, delimiter="\t")
+#
+# rlist = create_rows_list(origFileReader)
+# ldata = create_list_of_data(rlist)
+# list_data_strings_to_python_objects(ldata)
+# print(ldata)
+# new_ldata = extract_month(ldata, "2017-08")
+# print(new_ldata)
+# new_new_ldata = convert_to_tuples_list_data(new_ldata)
+# print(new_new_ldata)
 # output_list_data_to_txt(ldata, DELIMITER)

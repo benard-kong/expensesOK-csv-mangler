@@ -13,6 +13,8 @@ DESKTOP_ABS_PATH = os.sep.join((os.path.expanduser("~"), "Desktop"))
 AMOUNT_COL_TITLE = "Amount"
 CURRENCY = "KRW"
 DATE_TIME_FORMAT = "%Y.%m.%d" ## Format of the date string to change into datetime object
+DELIMITER = "\t" ## Separate columns with tabs
+SALARY_STRING_NAME = "급여" ## What did you write to mean "Salary" in Categories section?
 #### EDIT VARIABLES ABOVE AND PROGRAM SHOULD WORK ACCORDINGLY ####
 
 def find_csv_files():
@@ -68,13 +70,47 @@ def list_data_strings_to_python_objects(list_data):
                 dic_data[title] = None
             else:
                 if title.lower() == "date":
-                    dic_data[title] = datetime.datetime.strptime(dic_data[title], DATE_TIME_FORMAT)
+                    datetime_object = datetime.datetime.strptime(dic_data[title], DATE_TIME_FORMAT)
+                    date_object = datetime.date(datetime_object.year, datetime_object.month, datetime_object.day)
+                    dic_data[title] = date_object
                 elif title.lower() == "amount":
                     dic_data[title] = abs(float(dic_data[title]))
                     if CURRENCY.lower() == "krw":
                         dic_data[title] = int(dic_data[title])
 
+#todo: take list_data and return new list_data that only contains the month of data the user wants
+def extract_month(list_data, month):
+    """returns list_data with only the month the user wanted
+    month: string in the form YYYY-MM"""
+    ## add an assert that month is YYYY-MM format (use regex?)
+    target_month = datetime.datetime.strptime(month, "%Y-%m")
+    # month_after_target_month = target_month(m+=1)
+
+#todo: take list_data and convert it from python data types list_data with tuples only (preparing for final writing; which will just use writelines)
+
 #todo: output list_data to a txt file (or directly to xlsx/open office file?)
+def output_list_data_to_txt(list_data, delim, append_to_file=False, enc="utf-8"):
+    """void function; takes the data from list_data and outputs it into a txt file
+    rows are each list item
+    columns are each key; separated by delim
+    list_data: list of tuples, each tuple contains the values to be written
+    delim: the deliminator that separates each column (eg. "\t" or "," etc.
+    append_to_file: whether to open file in write or append mode"""
+    import platform
+    is_windows = False
+    if "windows" in platform.system().lower(): is_windows = True
+
+    write_mode = "w"
+    if append_to_file: write_mode = "a"
+    new_line = "\n"
+    if is_windows: new_line = "\r\n"
+
+    file_path = os.path.join(DESKTOP_ABS_PATH, "expenses_output.txt")
+    working_file = open(file_path, write_mode, encoding=enc, newline="")
+    working_file_writer = csv.writer(working_file, delimiter=delim, lineterminator=new_line)
+    for line in list_data:
+        working_file_writer.writerow(line)
+    working_file.close()
 
 # origFile = open(os.path.join(DESKTOP_ABS_PATH, "unixMoneyOK - Copy.csv"), "r", encoding="utf-8")
 # origFileReader = csv.reader(origFile, delimiter="\t")
@@ -83,3 +119,5 @@ def list_data_strings_to_python_objects(list_data):
 # ldata = create_list_of_data(rlist)
 # list_data_strings_to_python_objects(ldata)
 # print(ldata)
+# ldata = [(5500, "tongshin", None),(7500, "geub", None),(-1500, "Hi", "Yes")]
+# output_list_data_to_txt(ldata, DELIMITER)

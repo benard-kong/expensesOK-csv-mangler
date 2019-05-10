@@ -12,7 +12,7 @@ PREFERRED_FORMAT = ["Date", "Amount", "Category", "Category group", "Note"] ## o
 DESKTOP_ABS_PATH = os.sep.join((os.path.expanduser("~"), "Desktop"))
 AMOUNT_COL_TITLE = "Amount"
 CURRENCY = "KRW"
-DATE_TIME_FORMAT = "%Y.%m.%d" ## Format of the date string to change into datetime object
+DATE_TIME_FORMAT = "%Y.%m.%d" ## Format of the date string to change into date object
 DELIMITER = "\t" ## Separate columns with tabs
 SALARY_STRING_NAME = "급여" ## What did you write to mean "Salary" in Categories section?
 #### EDIT VARIABLES ABOVE AND PROGRAM SHOULD WORK ACCORDINGLY ####
@@ -70,21 +70,35 @@ def list_data_strings_to_python_objects(list_data):
                 dic_data[title] = None
             else:
                 if title.lower() == "date":
-                    datetime_object = datetime.datetime.strptime(dic_data[title], DATE_TIME_FORMAT)
-                    date_object = datetime.date(datetime_object.year, datetime_object.month, datetime_object.day)
-                    dic_data[title] = date_object
+                    dic_data[title] = datetime.datetime.strptime(dic_data[title], DATE_TIME_FORMAT).date()
                 elif title.lower() == "amount":
                     dic_data[title] = abs(float(dic_data[title]))
                     if CURRENCY.lower() == "krw":
                         dic_data[title] = int(dic_data[title])
+
+def find_next_month(date_obj):
+    """Finds and returns the first day of the month after date_obj's month.
+    date_obj: a datetime.date object with day=1"""
+    import datetime
+    next_month = date_obj + datetime.timedelta(days=32)
+    yr = next_month.year
+    m = next_month.month
+    day = 1
+    next_month = datetime.date(yr, m, day)
+    return next_month
 
 #todo: take list_data and return new list_data that only contains the month of data the user wants
 def extract_month(list_data, month):
     """returns list_data with only the month the user wanted
     month: string in the form YYYY-MM"""
     ## add an assert that month is YYYY-MM format (use regex?)
-    target_month = datetime.datetime.strptime(month, "%Y-%m")
-    # month_after_target_month = target_month(m+=1)
+    target_month_object = datetime.datetime.strptime(month, "%Y-%m").date()
+    month_after_object = find_next_month(target_month_object)
+    new_list_data = []
+    for row in list_data:
+        if target_month_object <= row["Date"] < month_after_object:
+            new_list_data.append(row)
+    return new_list_data
 
 #todo: take list_data and convert it from python data types list_data with tuples only (preparing for final writing; which will just use writelines)
 
@@ -112,12 +126,13 @@ def output_list_data_to_txt(list_data, delim, append_to_file=False, enc="utf-8")
         working_file_writer.writerow(line)
     working_file.close()
 
-# origFile = open(os.path.join(DESKTOP_ABS_PATH, "unixMoneyOK - Copy.csv"), "r", encoding="utf-8")
-# origFileReader = csv.reader(origFile, delimiter="\t")
-#
-# rlist = create_rows_list(origFileReader)
-# ldata = create_list_of_data(rlist)
-# list_data_strings_to_python_objects(ldata)
-# print(ldata)
-# ldata = [(5500, "tongshin", None),(7500, "geub", None),(-1500, "Hi", "Yes")]
+origFile = open(os.path.join(DESKTOP_ABS_PATH, "unixMoneyOK - Copy.csv"), "r", encoding="utf-8")
+origFileReader = csv.reader(origFile, delimiter="\t")
+
+rlist = create_rows_list(origFileReader)
+ldata = create_list_of_data(rlist)
+list_data_strings_to_python_objects(ldata)
+print(ldata)
+new_ldata = extract_month(ldata, "2017-08")
+print(new_ldata)
 # output_list_data_to_txt(ldata, DELIMITER)

@@ -17,14 +17,18 @@ LABEL_CATEGORY_GROUP = "Category group"
 LABEL_NOTE = "Note"
 PREFERRED_FORMAT = (
     LABEL_DATE,
-    LABEL_CATEGORY,
     LABEL_CATEGORY_GROUP,
+    LABEL_CATEGORY,
     LABEL_AMOUNT,
     LABEL_NOTE,
 ) # ordering of columns in final file (eg. date, in/out, category, subcategory, amount)
 
 AMOUNT_COL_TITLE = "Amount"
 CURRENCY = "KRW"
+CURRENCIES_WITH_NO_DECIMAL = ["krw", "jpy"] ## Can add to this list accordingly. So far it has:
+# krw: Korean Won
+# jpy: Japanese Yen
+
 DATE_TIME_FORMAT_ORIG = "%Y.%m.%d" ## Format of the date string to change into date object
 DELIMITER = "\t" ## Separate columns with tabs
 SALARY_STRING_NAME = "급여" ## What did you write to mean "Salary" in Categories section?
@@ -95,7 +99,7 @@ def list_data_strings_to_python_objects(list_data):
                     dic_data[title] = datetime.datetime.strptime(dic_data[title], DATE_TIME_FORMAT_ORIG).date()
                 elif title.lower() == "amount":
                     dic_data[title] = abs(float(dic_data[title]))
-                    if CURRENCY.lower() == "krw":
+                    if CURRENCY.lower() in CURRENCIES_WITH_NO_DECIMAL:
                         dic_data[title] = int(dic_data[title])
 
 def find_next_month(date_obj):
@@ -123,6 +127,14 @@ def extract_month(list_data, month):
             new_list_data.append(row)
     return new_list_data
 
+def swap_values_in_tuple(tuple_, index1, index2):
+    """Returns the same tuple with the two items in index1 & index2 swapped"""
+    list_ = list(tuple_)
+    temp_item = list_[index1]
+    list_[index1] = list_[index2]
+    list_[index2] = temp_item
+    return tuple(list_)
+
 def convert_to_tuples_list_data(list_data):
     """Convert dictionary form list_data to tuples list data for easy csv writing.
     Returns that new list_data object.
@@ -130,10 +142,22 @@ def convert_to_tuples_list_data(list_data):
     eg. [("2019-05-10", "-5000", "Expense", "", ""), ("2019-05-31, "2983829", "Salary", "", ""), ...]"""
     new_list_data = []
     for dict_row in list_data:
+        preferred_order = PREFERRED_FORMAT
         working_tuple = []
         is_salary = False
         if dict_row["Category"] == SALARY_STRING_NAME: is_salary = True
-        for col_title in PREFERRED_FORMAT:
+        ## invert LABEL_CATEGORY && LABEL_CATEGORY_GROUP's order if LABEL_CATEGORY_GROUP is empty
+        ## required because of how the app labels inverts categories/subcategories
+        invert_categories = False
+        if dict_row[LABEL_CATEGORY_GROUP] is None: invert_categories = True
+        if invert_categories:
+            assert LABEL_CATEGORY in preferred_order, f"{LABEL_CATEGORY} is not in the following list: {preferred_order}"
+            assert LABEL_CATEGORY_GROUP in preferred_order, f"{LABEL_CATEGORY_GROUP} is not in the following list: {preferred_order}"
+            categories_index = preferred_order.index(LABEL_CATEGORY)
+            categories_group_index = preferred_order.index(LABEL_CATEGORY_GROUP)
+            preferred_order = swap_values_in_tuple(preferred_order, categories_index, categories_group_index)
+
+        for col_title in preferred_order:
             val = dict_row[col_title]
             if val == None:
                 val = ""

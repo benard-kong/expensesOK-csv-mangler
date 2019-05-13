@@ -8,10 +8,21 @@ import csv, os, re, datetime
 NUM_USERS = 2 ## Number of people in your household using the expenses app.
 FILE_NAME_CONTAINS = r"MoneyOK"
 FILE_TYPE = r"csv"
-PREFERRED_FORMAT = ["Date", "Amount", "Category", "Category group", "Note"] # ordering of columns in final file (eg.
-                                                                            # date, in/out, category, subcategory,
-                                                                            # amount)
 DESKTOP_ABS_PATH = os.sep.join((os.path.expanduser("~"), "Desktop"))
+
+LABEL_DATE = "Date"
+LABEL_AMOUNT = "Amount"
+LABEL_CATEGORY = "Category"
+LABEL_CATEGORY_GROUP = "Category group"
+LABEL_NOTE = "Note"
+PREFERRED_FORMAT = (
+    LABEL_DATE,
+    LABEL_CATEGORY,
+    LABEL_CATEGORY_GROUP,
+    LABEL_AMOUNT,
+    LABEL_NOTE,
+) # ordering of columns in final file (eg. date, in/out, category, subcategory, amount)
+
 AMOUNT_COL_TITLE = "Amount"
 CURRENCY = "KRW"
 DATE_TIME_FORMAT_ORIG = "%Y.%m.%d" ## Format of the date string to change into date object
@@ -20,19 +31,24 @@ SALARY_STRING_NAME = "급여" ## What did you write to mean "Salary" in Categori
 USER_INPUT_YEAR_MONTH_FORMAT = "YYYY-MM" ## format of yr & month user should type
 USER_INPUT_YEAR_MONTH_FORMAT_DATETIME_OBJ = "%Y-%m" ## When changing user's input into datetime.date obj
 USER_INPUT_YEAR_MONTH_FORMAT_REGEX = r"\d\d\d\d-\d\d" ## regex for the format the user must type the YYYY-MM; can change the
+
+OUTPUT_FILENAME = "output_expenses.txt"
                                                 # '-' to '.' etc. if prefer the user to type another format
 #### EDIT VARIABLES ABOVE AND PROGRAM SHOULD WORK ACCORDINGLY ####
 
 def find_csv_files():
-    """This function returns a list of num_users items, all of which will contain 'MoneyOK' in their names."""
+    """Returns a list of csv files with their absolute file paths.
+    len(file_list) == NUM_USERS"""
     file_list = []
-    file_search_regex = re.compile(r".*" + FILE_NAME_CONTAINS.lower() + r".*\." + FILE_TYPE)
+    file_search_regex = re.compile(r".*" + FILE_NAME_CONTAINS.lower() + r".*\." + FILE_TYPE.lower())
     for dir, subdirs, files in os.walk(DESKTOP_ABS_PATH):
         if dir == DESKTOP_ABS_PATH:
             for file in files:
                 file = file.lower()
                 if file.endswith("." + FILE_TYPE) and file_search_regex.search(file) is not None:
-                    file_list.append(file)
+                    file_path = os.path.join(DESKTOP_ABS_PATH, file)
+                    file_list.append(file_path)
+    # todo: the assert below prints out the message with literal space characters if split into multiple lines? Check why
     assert (len(file_list) == NUM_USERS), f"There are {len(file_list)} files on your desktop but expected {NUM_USERS} files. Please change the variable 'num_users' at the top of the file."
     return file_list
 
@@ -131,6 +147,19 @@ def convert_to_tuples_list_data(list_data):
         new_list_data.append(working_tuple)
     return new_list_data
 
+def find_new_line_escape_sequence():
+    """Returns escape sequence for new line depending on platform.
+    Windows == '\r\n'; Unix == '\n'
+    """
+    import platform
+    is_windows = False
+    if "windows" in platform.system().lower():
+        is_windows = True
+    new_line = "\n"
+    if is_windows:
+        new_line = "\r\n"
+    return new_line
+
 def output_list_data_to_txt(list_data, delim, append_to_file=False, enc="utf-8"):
     """void function; takes the data from list_data and outputs it into a txt file
     rows are each list item
@@ -138,31 +167,45 @@ def output_list_data_to_txt(list_data, delim, append_to_file=False, enc="utf-8")
     list_data: list of tuples, each tuple contains the values to be written
     delim: the deliminator that separates each column (eg. "\t" or "," etc.
     append_to_file: whether to open file in write or append mode"""
-    import platform
-    is_windows = False
-    if "windows" in platform.system().lower(): is_windows = True
-
     write_mode = "w"
     if append_to_file: write_mode = "a"
-    new_line = "\n"
-    if is_windows: new_line = "\r\n"
+    # new_line = find_new_line_escape_sequence() # not necessary?
 
-    file_path = os.path.join(DESKTOP_ABS_PATH, "expenses_output.txt")
+    file_path = os.path.join(DESKTOP_ABS_PATH, OUTPUT_FILENAME)
     working_file = open(file_path, write_mode, encoding=enc, newline="")
-    working_file_writer = csv.writer(working_file, delimiter=delim, lineterminator=new_line)
+    # working_file_writer = csv.writer(working_file, delimiter=delim, lineterminator=new_line) # lineterminator not necessary?
+    working_file_writer = csv.writer(working_file, delimiter=delim)
     for line in list_data:
         working_file_writer.writerow(line)
     working_file.close()
 
-origFile = open(os.path.join(DESKTOP_ABS_PATH, "unixMoneyOK - Copy.csv"), "r", encoding="utf-8")
-origFileReader = csv.reader(origFile, delimiter="\t")
+def truncate_last_line(file_path):
+    """void function; removes the last new line in file_path for easy copy paste to Excel and
+    no new rows are created in Excel Table"""
+    with open(file_path, 'rb+') as filehandle: # source: https://stackoverflow.com/a/18857381
+        filehandle.seek(-1, os.SEEK_END) # puts cursor at file[-1] position?
+        assert filehandle.read() == b"\n", "The last line is not a '\\n' character, cannot truncate"
+        filehandle.seek(-1, os.SEEK_END)
+        filehandle.truncate() # 'shortens' file up to cursor's position?
 
-rlist = create_rows_list(origFileReader)
-ldata = create_list_of_data(rlist)
-list_data_strings_to_python_objects(ldata)
-print(ldata)
-new_ldata = extract_month(ldata, "2017-08")
-print(new_ldata)
-new_new_ldata = convert_to_tuples_list_data(new_ldata)
-print(new_new_ldata)
-# output_list_data_to_txt(ldata, DELIMITER)
+def main():
+    wanted_month = input("Input the year and month in the format YYYY-MM: ")
+    files_list = find_csv_files()
+    append_to_file = False
+    for file in files_list:
+        orig_file = open(file, "r", encoding="utf-8")
+        orig_file_reader = csv.reader(orig_file, delimiter=DELIMITER) # delimiter should be "," but only works with "\t"?
+
+        rows_list = create_rows_list(orig_file_reader)
+        list_data = create_list_of_data(rows_list)
+        list_data_strings_to_python_objects(list_data)
+        list_data = extract_month(list_data, wanted_month)
+        list_data = convert_to_tuples_list_data(list_data)
+        output_list_data_to_txt(list_data, DELIMITER, append_to_file=append_to_file)
+        append_to_file = True
+    truncate_last_line(os.path.join(DESKTOP_ABS_PATH, OUTPUT_FILENAME)) # Removes last '\n' char
+    print(f"Finished! Check your Desktop to find the file '{OUTPUT_FILENAME}'")
+
+
+if __name__ == "__main__":
+    main()

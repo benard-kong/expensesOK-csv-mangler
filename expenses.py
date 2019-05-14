@@ -8,7 +8,7 @@ import csv, os, re, datetime
 NUM_USERS = 2 ## Number of people in your household using the expenses app.
 FILE_NAME_CONTAINS = r"MoneyOK"
 FILE_TYPE = r"csv"
-DESKTOP_ABS_PATH = os.sep.join((os.path.expanduser("~"), "Desktop"))
+DESKTOP_ABS_PATH = os.path.join(os.path.expanduser("~"), "Desktop")
 
 LABEL_DATE = "Date"
 LABEL_AMOUNT = "Amount"

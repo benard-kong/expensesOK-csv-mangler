@@ -66,7 +66,6 @@ def find_csv_files():
                 if file.endswith("." + FILE_TYPE) and file_search_regex.search(file) is not None:
                     file_path = os.path.join(DESKTOP_ABS_PATH, file)
                     file_list.append(file_path)
-    # todo: the assert below prints out the message with literal space characters if split into multiple lines? Check why
     if len(file_list) != NUM_USERS:
         choices = "yn"
         input_text = f"Expected {NUM_USERS} .{FILE_TYPE} files on the Desktop, but there were {len(file_list)} files.\
@@ -75,6 +74,7 @@ def find_csv_files():
         if choice.lower() == "y":
             NUM_USERS = len(file_list)
             file_list = find_csv_files()
+    # todo: the assert below prints out the message with literal space characters if split into multiple lines? Check why
     assert (len(file_list) == NUM_USERS), f"There are {len(file_list)} files on your desktop but expected {NUM_USERS} files. Please change the variable 'NUM_USERS' at the top of the file."
     return file_list
 

@@ -38,11 +38,25 @@ USER_INPUT_YEAR_MONTH_FORMAT_REGEX = r"\d\d\d\d-\d\d" ## regex for the format th
 
 OUTPUT_FILENAME = "output_expenses.txt"
                                                 # '-' to '.' etc. if prefer the user to type another format
+
+UNWANTED_UNICODE_CHARS = (b'\xef', b'\xbb', b'\xbf', b'\ufeff') ## misc unwanted chars in utf-16 encoding
+
 #### EDIT VARIABLES ABOVE AND PROGRAM SHOULD WORK ACCORDINGLY ####
+
+def ask_user_for_choice_until_proper_input(input_text, choices):
+    """Asks user for a choice until they input something in choices.
+    Returns the user's choice"""
+    choice = ""
+    while choice.lower() not in choices or choice == "":
+        choice = input(input_text)
+        if choice.lower() == choices:
+            choice = ""
+    return choice
 
 def find_csv_files():
     """Returns a list of csv files with their absolute file paths.
     len(file_list) == NUM_USERS"""
+    global NUM_USERS
     file_list = []
     file_search_regex = re.compile(r".*" + FILE_NAME_CONTAINS.lower() + r".*\." + FILE_TYPE.lower())
     for dir, subdirs, files in os.walk(DESKTOP_ABS_PATH):
@@ -53,7 +67,15 @@ def find_csv_files():
                     file_path = os.path.join(DESKTOP_ABS_PATH, file)
                     file_list.append(file_path)
     # todo: the assert below prints out the message with literal space characters if split into multiple lines? Check why
-    assert (len(file_list) == NUM_USERS), f"There are {len(file_list)} files on your desktop but expected {NUM_USERS} files. Please change the variable 'num_users' at the top of the file."
+    if len(file_list) != NUM_USERS:
+        choices = "yn"
+        input_text = f"Expected {NUM_USERS} .{FILE_TYPE} files on the Desktop, but there were {len(file_list)} files.\
+        Would you like to run the program for all {len(file_list)} files? (y/n)\n"
+        choice = ask_user_for_choice_until_proper_input(input_text, choices)
+        if choice.lower() == "y":
+            NUM_USERS = len(file_list)
+            file_list = find_csv_files()
+    assert (len(file_list) == NUM_USERS), f"There are {len(file_list)} files on your desktop but expected {NUM_USERS} files. Please change the variable 'NUM_USERS' at the top of the file."
     return file_list
 
 def create_rows_list(csv_reader):
@@ -64,6 +86,13 @@ def create_rows_list(csv_reader):
     for row in csv_reader:
         rows_list.append(row)
     return rows_list
+
+def remove_extraneous_chars_and_convert_byte_to_string(byte_string, encoding):
+    """Removes unwanted chars and returns string form of original byte_string"""
+    for unwanted_char in UNWANTED_UNICODE_CHARS:
+        if unwanted_char in byte_string:
+            byte_string = byte_string.replace(unwanted_char, b"")
+    return byte_string.decode(encoding)
 
 def create_list_of_data(rows_list):
     """This function returns a list of dicts which define the values of each row in the original csv file.
@@ -79,7 +108,10 @@ def create_list_of_data(rows_list):
         dict_data = {}
         for col in range(num_cols):
             col_title = rows_list[first_row][col]
+            col_title = remove_extraneous_chars_and_convert_byte_to_string(col_title.encode(), "utf-8")
             cur_item = rows_list[row][col]
+            cur_item = remove_extraneous_chars_and_convert_byte_to_string(cur_item.encode(), "utf-8")
+
             if col_title in PREFERRED_FORMAT:
                 dict_data[col_title] = cur_item
         list_data.append(dict_data)
@@ -217,7 +249,15 @@ def main():
     files_list = find_csv_files()
     append_to_file = False
     for file in files_list:
-        orig_file = open(file, "r", encoding="utf-8")
+        try:
+            with open(file, "r", encoding="utf-8") as test_read_file:
+                test_read_file.read()
+            # successfully read in utf-8 encoding, continue to open file as normal
+            orig_file = open(file, "r", encoding="utf-8")
+            # print("opening unix file")
+        except UnicodeDecodeError:
+            orig_file = open(file, "r", encoding="utf-16") ## if exported as 'windows' file in the app
+            # print("opening windows file")
         orig_file_reader = csv.reader(orig_file, delimiter=DELIMITER) # delimiter should be "," but only works with "\t"?
 
         rows_list = create_rows_list(orig_file_reader)

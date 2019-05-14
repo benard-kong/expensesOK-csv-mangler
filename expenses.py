@@ -34,10 +34,10 @@ DELIMITER = "\t" ## Separate columns with tabs
 SALARY_STRING_NAME = "급여" ## What did you write to mean "Salary" in Categories section?
 USER_INPUT_YEAR_MONTH_FORMAT = "YYYY-MM" ## format of yr & month user should type
 USER_INPUT_YEAR_MONTH_FORMAT_DATETIME_OBJ = "%Y-%m" ## When changing user's input into datetime.date obj
+                                                    # '-' to '.' etc. if prefer the user to type another format
 USER_INPUT_YEAR_MONTH_FORMAT_REGEX = r"\d\d\d\d-\d\d" ## regex for the format the user must type the YYYY-MM; can change the
 
 OUTPUT_FILENAME = "output_expenses.txt"
-                                                # '-' to '.' etc. if prefer the user to type another format
 
 UNWANTED_UNICODE_CHARS = (b'\xef', b'\xbb', b'\xbf', b'\ufeff') ## misc unwanted chars in utf-16 encoding
 
